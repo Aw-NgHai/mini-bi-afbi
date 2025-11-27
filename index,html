@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniBI v6.6 Standalone</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- 3. Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        body { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const PASTEL_COLORS = [
+            '#fee2e2', // đỏ nhạt
+            '#e0f2fe', // xanh dương nhạt
+            '#dcfce7', // xanh lá nhạt
+            '#fef9c3', // vàng nhạt
+            '#ede9fe', // tím nhạt
+            '#fce7f3', // hồng nhạt
+            '#e2e8f0', // xám nhạt
+        ];
+
+        const { useState, useEffect, useMemo, useCallback } = React;
+
+        // --- FIXED ICONS (Embedded SVGs wrapped in Fragments) ---
+        const ICONS = {
+            Upload: (<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>),
+            FileText: (<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></>),
+            BarChart2: (<><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>),
+            Save: (<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>),
+            Plus: (<><path d="M5 12h14"/><path d="M12 5v14"/></>),
+            Trash2: (<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>),
+            Settings: (<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>),
+            Calculator: (<><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></>),
+            Table: (<><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></>),
+            Layout: (<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></>),
+            ChevronRight: <path d="m9 18 6-6-6-6"/>,
+            ChevronDown: <path d="m6 9 6 6 6-6"/>,
+            PieChart: (<><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></>),
+            Activity: <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>,
+            AlertCircle: (<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></>),
+            RefreshCw: (<><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>),
+            X: (<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>),
+            GripVertical: (<><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></>),
+            MoreHorizontal: (<><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></>),
+            Edit3: (<><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></>),
+            Check: <path d="M20 6 9 17l-5-5"/>,
+            Filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>,
+            Search: (<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>),
+            FolderOpen: <path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/>,
+            Download: (<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>),
+            UploadCloud: (<><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></>),
+            Palette: (<><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></>),
+            Layers: (<><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></>),
+            Eye: (<><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>),
+            EyeOff: (<><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></>)
+        };
+
+        const Icon = ({ name, size = 24, color = "currentColor", className = "", ...props }) => {
+            const content = ICONS[name];
+            if (!content) return null;
+            return (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`lucide lucide-${name.toLowerCase()} ${className}`}
+                    {...props}
+                >
+                    {content}
+                </svg>
+            );
+        };
+
+        const Upload = (props) => <Icon name="Upload" {...props} />;
+        const FileText = (props) => <Icon name="FileText" {...props} />;
+        const BarChart2 = (props) => <Icon name="BarChart2" {...props} />;
+        const Save = (props) => <Icon name="Save" {...props} />;
+        const Plus = (props) => <Icon name="Plus" {...props} />;
+        const Trash2 = (props) => <Icon name="Trash2" {...props} />;
+        const Settings = (props) => <Icon name="Settings" {...props} />;
+        const Calculator = (props) => <Icon name="Calculator" {...props} />;
+        const Table = (props) => <Icon name="Table" {...props} />;
+        const Layout = (props) => <Icon name="Layout" {...props} />;
+        const ChevronRight = (props) => <Icon name="ChevronRight" {...props} />;
+        const ChevronDown = (props) => <Icon name="ChevronDown" {...props} />;
+        const PieChart = (props) => <Icon name="PieChart" {...props} />;
+        const Activity = (props) => <Icon name="Activity" {...props} />;
+        const AlertCircle = (props) => <Icon name="AlertCircle" {...props} />;
+        const RefreshCw = (props) => <Icon name="RefreshCw" {...props} />;
+        const X = (props) => <Icon name="X" {...props} />;
+        const GripVertical = (props) => <Icon name="GripVertical" {...props} />;
+        const MoreHorizontal = (props) => <Icon name="MoreHorizontal" {...props} />;
+        const Edit3 = (props) => <Icon name="Edit3" {...props} />;
+        const Check = (props) => <Icon name="Check" {...props} />;
+        const Filter = (props) => <Icon name="Filter" {...props} />;
+        const Search = (props) => <Icon name="Search" {...props} />;
+        const FolderOpen = (props) => <Icon name="FolderOpen" {...props} />;
+        const Download = (props) => <Icon name="Download" {...props} />;
+        const UploadCloud = (props) => <Icon name="UploadCloud" {...props} />;
+        const Palette = (props) => <Icon name="Palette" {...props} />;
+        const Layers = (props) => <Icon name="Layers" {...props} />;
+        const Eye = (props) => <Icon name="Eye" {...props} />;
+        const EyeOff = (props) => <Icon name="EyeOff" {...props} />;
+
+        // --- APP CONSTANTS ---
+
+        const ENCODING_OPTIONS = [
+            { value: 'auto', label: '自動検出 (Auto)' },
+            { value: 'utf-8', label: 'UTF-8' },
+            { value: 'shift-jis', label: 'Shift-JIS' },
+            { value: 'windows-31j', label: 'CP932 (Windows-31J)' },
+            { value: 'utf-16le', label: 'UTF-16LE' },
+            { value: 'euc-jp', label: 'EUC-JP' }
+        ];
+
+        const PALETTE = [
+            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#64748b'
+        ];
+
+        const CHART_TYPES = [
+            { id: 'bar', label: '棒グラフ (Bar)' },
+            { id: 'line', label: '折れ線 (Line)' },
+        ];
+
+        const FORMATS = {
+            number: { label: '数値 (1,234)', fn: (v) => Math.round(v).toLocaleString() },
+            currency: { label: '通貨 (¥1,234)', fn: (v) => '¥' + Math.round(v).toLocaleString() },
+            percent: { label: 'パーセント (12.5%)', fn: (v) => (v * 100).toFixed(1) + '%' },
+            decimal: { label: '小数 (1.23)', fn: (v) => v.toFixed(2) },
+        };
+
+        // --- APP LOGIC ---
+
+        const decodeFileContent = (buffer, selectedEncoding) => {
+            if (selectedEncoding !== 'auto') {
+                try {
+                    const decoder = new TextDecoder(selectedEncoding, { fatal: false });
+                    return { text: decoder.decode(buffer), encoding: selectedEncoding };
+                } catch (e) { return { text: "", encoding: "Error" }; }
+            }
+            try {
+                const decoder = new TextDecoder('utf-8', { fatal: true });
+                return { text: decoder.decode(buffer), encoding: 'UTF-8 (Auto)' };
+            } catch (e) {
+                try {
+                    const decoder = new TextDecoder('windows-31j', { fatal: true });
+                    return { text: decoder.decode(buffer), encoding: 'CP932 (Auto)' };
+                } catch (e2) {
+                    try {
+                        const decoder = new TextDecoder('utf-16le', { fatal: true });
+                        return { text: decoder.decode(buffer), encoding: 'UTF-16LE (Auto)' };
+                    } catch(e3) {
+                        const decoder = new TextDecoder('utf-8');
+                        return { text: decoder.decode(buffer), encoding: 'UTF-8 (Lossy)' };
+                    }
+                }
+            }
+        };
+
+        const parseCSV = (text, sourceName) => {
+            const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim() !== '');
+            if (lines.length < 2) return { data: [], separator: ',' };
+            
+            const candidates = [',', ';', '\t', '|'];
+            let maxCount = 0;
+            let bestSep = ',';
+            candidates.forEach(sep => {
+                const count = lines[0].split(sep).length - 1;
+                if (count > maxCount) { maxCount = count; bestSep = sep; }
+            });
+            const separator = bestSep;
+
+            const headers = lines[0].split(separator).map(h => h.trim().replace(/^"|"$/g, ''));
+            
+            const data = lines.slice(1).map(line => {
+                let values = [];
+                if (line.indexOf('"') === -1) {
+                    values = line.split(separator);
+                } else {
+                    const regex = new RegExp(`(?:^|${separator})(\"(?:[^\"]+|\"\")*\"|[^${separator}]*)`,"g");
+                    let match;
+                    while (match = regex.exec(line)){
+                        let val = match[1];
+                        if (val.length > 0 && val.startsWith(separator)) val = val.substring(1);
+                        values.push(val);
+                    }
+                }
+                const row = {};
+                headers.forEach((h, i) => {
+                    let val = values[i];
+                    if (val) val = val.trim().replace(/^"|"$/g, '');
+                    let numVal = NaN;
+                    if (val) {
+                        const cleanVal = val.replace(/,/g, ''); 
+                        if (!isNaN(Number(cleanVal)) && cleanVal.trim() !== '') {
+                            numVal = Number(cleanVal);
+                        }
+                    }
+                    row[h] = !isNaN(numVal) ? numVal : (val || 0);
+                });
+                row['__source'] = sourceName;
+                return row;
+            });
+            return { data, separator };
+        };
+
+        const evaluateFormula = (formula, rowData) => {
+            try {
+                const parsed = formula.replace(/\[(.*?)\]/g, (match, p1) => {
+                    let val = rowData[p1];
+                    if (val === undefined || val === null || isNaN(Number(val))) val = 0;
+                    return `(${val})`; 
+                });
+                const result = new Function('return ' + parsed)();
+                return isFinite(result) ? result : 0;
+            } catch (e) { return 0; }
+        };
+
+        // --- COMPONENTS ---
+        const Button = ({ children, onClick, variant = 'primary', className = "", size = 'md', disabled=false, ...props }) => {
+            const baseStyle = "inline-flex items-center justify-center rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm";
+            const variants = {
+                primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 border border-transparent",
+                secondary: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-500",
+                danger: "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 focus:ring-rose-500",
+                ghost: "bg-transparent text-slate-600 hover:bg-slate-100 shadow-none border-transparent"
+            };
+            const sizes = { sm: "px-3 py-1.5 text-xs", md: "px-4 py-2 text-sm", lg: "px-6 py-3 text-base" };
+            return <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${sizes[size]} ${className}`} {...props}>{children}</button>;
+        };
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`}>
+                {children}
+            </div>
+        );
+
+        const Checkbox = ({ checked, onChange, label }) => (
+            <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1.5 rounded transition-colors select-none">
+                <input type="checkbox" checked={checked} onChange={onChange} className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300" />
+                <span className="truncate">{label}</span>
+            </label>
+        );
+
+        // --- MAIN APP ---
+        function MiniBIApp() {
+            const [fileSources, setFileSources] = useState([{ id: 'src_1', name: 'データソース 1', file: null, encoding: 'auto', info: null }]);
+            const [data, setData] = useState([]);
+            const [headers, setHeaders] = useState([]);
+            const [view, setView] = useState('upload'); 
+
+            const defaultConfig = {
+                rows: [], columns: [], values: [], filters: [], filterValues: {}, 
+                showCumulative: false, showForecast: false, showAverage: false, showChart: true,
+                fieldSettings: {}, globalChartSettings: { stacked: false }
+            };
+
+            const [sheets, setSheets] = useState([{ id: 1, name: 'シート 1', config: JSON.parse(JSON.stringify(defaultConfig)) }]);
+            const [activeSheetId, setActiveSheetId] = useState(1);
+            const [calculatedFields, setCalculatedFields] = useState([]); 
+
+            const [dragItem, setDragItem] = useState(null); 
+            const [calcModal, setCalcModal] = useState({ open: false, tab: 'create', editId: null });
+            const [newCalcField, setNewCalcField] = useState({ name: '', formula: '' });
+            const [hoverData, setHoverData] = useState(null); 
+            const [filterModal, setFilterModal] = useState({ open: false, field: null, searchTerm: '' });
+            const [settingsModal, setSettingsModal] = useState({ open: false, field: null });
+            const [templateModal, setTemplateModal] = useState(false);
+            const [savedTemplates, setSavedTemplates] = useState([]);
+            const [templateNameInput, setTemplateNameInput] = useState('');
+            const [editingTabId, setEditingTabId] = useState(null);
+            const [editingTabName, setEditingTabName] = useState("");
+
+            const activeSheet = useMemo(() => sheets.find(s => s.id === activeSheetId) || sheets[0], [sheets, activeSheetId]);
+            
+            const updateActiveSheetConfig = useCallback((newConfigPartial) => {
+                setSheets(prev => prev.map(s => s.id === activeSheetId ? { ...s, config: { ...s.config, ...newConfigPartial } } : s));
+            }, [activeSheetId]);
+
+            const updateFieldSetting = useCallback((field, settingKey, value) => {
+                setSheets(prevSheets => {
+                    const currentSheet = prevSheets.find(s => s.id === activeSheetId);
+                    if (!currentSheet) return prevSheets;
+                    
+                    const currentConfig = currentSheet.config;
+                    const currentSettings = currentConfig.fieldSettings || {};
+                    const fieldSetting = currentSettings[field] || {};
+                    
+                    const newConfig = {
+                        ...currentConfig,
+                        fieldSettings: {
+                            ...currentSettings,
+                            [field]: { ...fieldSetting, [settingKey]: value }
+                        }
+                    };
+                    return prevSheets.map(s => s.id === activeSheetId ? { ...s, config: newConfig } : s);
+                });
+            }, [activeSheetId]);
+
+            useEffect(() => {
+                const saved = localStorage.getItem('miniBI_templates');
+                if (saved) setSavedTemplates(JSON.parse(saved));
+            }, []);
+
+            const buildTemplateObject = (name, baseId = Date.now()) => {
+                return {
+                    id: baseId,
+                    name,
+                    // chỉ lưu cấu hình của sheet
+                    sheets: sheets.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        config: s.config
+                    })),
+                    // và các calculated fields
+                    calculatedFields
+                };
+            };
+
+            const saveTemplate = () => {
+                if (!templateNameInput) return;
+
+                // tạo object chỉ chứa tùy chỉnh
+                const newTemplateId = Date.now();
+                const baseTemplate = buildTemplateObject(templateNameInput, newTemplateId);
+
+                // tìm template cùng tên
+                const existIndex = savedTemplates.findIndex(t => t.name === templateNameInput);
+
+                let updated;
+                if (existIndex >= 0) {
+                    // ghi đè: giữ lại id cũ để list không nhảy lung tung
+                    const overwritten = buildTemplateObject(templateNameInput, savedTemplates[existIndex].id);
+                    updated = savedTemplates.map((t, idx) => idx === existIndex ? overwritten : t);
+                } else {
+                    // thêm mới
+                    updated = [...savedTemplates, baseTemplate];
+                }
+
+                setSavedTemplates(updated);
+                localStorage.setItem('miniBI_templates', JSON.stringify(updated));
+                setTemplateNameInput('');
+                alert(existIndex >= 0 ? 'テンプレートを上書き保存しました' : 'テンプレートを保存しました');
+            };
+
+            const loadTemplate = (t) => {
+                setSheets(t.sheets);
+                setCalculatedFields(t.calculatedFields || []);
+                setTemplateModal(false);
+                setView('dashboard');
+            };
+
+            const deleteTemplate = (id) => {
+                const updated = savedTemplates.filter(t => t.id !== id);
+                setSavedTemplates(updated);
+                localStorage.setItem('miniBI_templates', JSON.stringify(updated));
+            };
+
+            const exportTemplateJSON = (t) => {
+                // đảm bảo chỉ xuất phần cấu hình
+                const minimal = {
+                    name: t.name,
+                    sheets: (t.sheets || []).map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        config: s.config
+                    })),
+                    calculatedFields: t.calculatedFields || []
+                };
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(minimal));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", `minibi_template_${t.name}.json`);
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            };
+
+            const importTemplateJSON = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const t = JSON.parse(evt.target.result);
+                        if (!t.sheets) throw new Error("Invalid Format");
+
+                        // chuẩn hóa để chỉ giữ phần tùy chỉnh
+                        const normalized = {
+                            id: Date.now(),
+                            name: (t.name || 'Imported') + " (Imported)",
+                            sheets: (t.sheets || []).map((s, idx) => ({
+                                id: s.id || (idx + 1),
+                                name: s.name || `シート ${idx + 1}`,
+                                config: s.config || JSON.parse(JSON.stringify(defaultConfig))
+                            })),
+                            calculatedFields: t.calculatedFields || []
+                        };
+
+                        const updated = [...savedTemplates, normalized];
+                        setSavedTemplates(updated);
+                        localStorage.setItem('miniBI_templates', JSON.stringify(updated));
+                        alert('テンプレートをインポートしました');
+                    } catch(err) {
+                        alert('ファイルの読み込みに失敗しました');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            useEffect(() => {
+                let isSubscribed = true;
+                const processFiles = async () => {
+                    let combinedData = [];
+                    let newHeaders = new Set();
+                    const updatedSources = [...fileSources];
+
+                    for (let i = 0; i < fileSources.length; i++) {
+                        const src = fileSources[i];
+                        if (!src.file) continue;
+                        try {
+                            const processedFile = await new Promise(resolve => {
+                                const reader = new FileReader();
+                                reader.onload = (evt) => {
+                                    const { text, encoding } = decodeFileContent(evt.target.result, src.encoding);
+                                    const { data: parsed, separator } = parseCSV(text, src.name);
+                                    if (!src.info || src.info.encoding !== encoding || src.info.count !== parsed.length) {
+                                        updatedSources[i] = { ...src, info: { encoding, separator, count: parsed.length } };
+                                    }
+                                    resolve(parsed);
+                                };
+                                reader.readAsArrayBuffer(src.file);
+                            });
+                            if (processedFile.length > 0) {
+                                Object.keys(processedFile[0]).forEach(k => k !== '__source' && newHeaders.add(k));
+                                combinedData = [...combinedData, ...processedFile];
+                            }
+                        } catch (e) { console.error("File read error", e); }
+                    }
+
+                    if (isSubscribed) {
+                        setData(combinedData);
+                        setHeaders(Array.from(newHeaders));
+                    }
+                };
+                processFiles();
+                return () => { isSubscribed = false; };
+            }, [fileSources]);
+
+            const updateSourceWrapper = (id, field, value) => {
+                setFileSources(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+            };
+
+            const pivotData = useMemo(() => {
+                if (data.length === 0) return null;
+                const { rows, columns, values, filters, filterValues = {}, showCumulative } = activeSheet.config;
+
+                const filteredData = data.filter(row => {
+                    return filters.every(filterField => {
+                        const allowed = filterValues[filterField];
+                        if (!allowed || allowed.length === 0) return true; 
+                        return allowed.includes(String(row[filterField]));
+                    });
+                });
+
+                const grouped = {};
+                const createAggObj = () => {
+                    const obj = { _count: 0 };
+                    headers.forEach(h => obj[h] = 0); 
+                    return obj;
+                };
+
+                filteredData.forEach(row => {
+                    const rowKey = rows.length > 0 ? rows.map(r => row[r]).join(' - ') : '総計';
+                    const colKey = columns.length > 0 ? columns.map(c => row[c]).join(' - ') : 'All';
+                    if (!grouped[rowKey]) grouped[rowKey] = {};
+                    if (!grouped[rowKey][colKey]) grouped[rowKey][colKey] = createAggObj();
+                    const agg = grouped[rowKey][colKey];
+                    agg._count++;
+                    headers.forEach(h => {
+                        const val = Number(row[h]);
+                        if (!isNaN(val)) agg[h] += val;
+                    });
+                });
+
+                const result = [];
+                const colKeys = new Set();
+                
+                Object.entries(grouped).forEach(([rowLabel, colData]) => {
+                    const rowObj = { _rowLabel: rowLabel };
+                    let rowGrandTotal = 0;
+                    
+                    Object.entries(colData).forEach(([colLabel, aggData]) => {
+                        colKeys.add(colLabel);
+                        const computedCell = { ...aggData };
+                        calculatedFields.forEach(cf => {
+                            computedCell[cf.name] = evaluateFormula(cf.formula, aggData);
+                        });
+                        values.forEach(val => {
+                            const cellValue = computedCell[val] !== undefined ? computedCell[val] : 0;
+                            rowObj[`${colLabel}_${val}`] = cellValue;
+                            if (val === values[0]) rowGrandTotal += cellValue; 
+                        });
+                    });
+                    rowObj._total = rowGrandTotal;
+                    result.push(rowObj);
+                });
+
+                const sortedColKeys = Array.from(colKeys).sort();
+
+                const bottomRows = {};
+                ['Total', 'Average', 'Forecast'].forEach(type => {
+                    bottomRows[type] = { _rowLabel: type === 'Total' ? '合計' : type === 'Average' ? '平均' : '着地予想', isBottom: true };
+                });
+
+                sortedColKeys.forEach(colKey => {
+                    const globalAgg = createAggObj();
+                    Object.values(grouped).forEach(colMap => {
+                        const cellAgg = colMap[colKey];
+                        if (cellAgg) {
+                            globalAgg._count += cellAgg._count;
+                            headers.forEach(h => globalAgg[h] += cellAgg[h]);
+                        }
+                    });
+                    calculatedFields.forEach(cf => {
+                        globalAgg[cf.name] = evaluateFormula(cf.formula, globalAgg);
+                    });
+                    values.forEach(val => {
+                        const valValue = globalAgg[val] !== undefined ? globalAgg[val] : 0;
+                        bottomRows['Total'][`${colKey}_${val}`] = valValue;
+                        bottomRows['Average'][`${colKey}_${val}`] = globalAgg._count > 0 ? valValue / Object.keys(grouped).length : 0; 
+                        bottomRows['Forecast'][`${colKey}_${val}`] = valValue * 1.1; 
+                    });
+                });
+
+                if (showCumulative) {
+                    let runningTotal = 0;
+                    result.forEach(r => { runningTotal += r._total; r._cumulative = runningTotal; });
+                }
+
+                ['Total', 'Average', 'Forecast'].forEach(type => {
+                    bottomRows[type]._total = result.reduce((acc, r) => acc + r._total, 0); 
+                    if (type === 'Forecast') bottomRows[type]._total *= 1.1;
+                });
+
+                return { body: result, bottom: bottomRows, colKeys: sortedColKeys };
+            }, [data, activeSheet.config, calculatedFields, headers]);
+
+            const handleDragStart = (e, type, value, index) => {
+                setDragItem({ type, value, index });
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDrop = (e, targetArea, targetIndex = -1) => {
+                e.preventDefault();
+                if (!dragItem) return;
+                if (targetArea === 'formula') return;
+
+                const currentConfig = activeSheet.config;
+                let newConfigList = [...(currentConfig[targetArea] || [])];
+
+                if (dragItem.type === targetArea) {
+                    if (targetIndex === -1) return; 
+                    const items = [...newConfigList];
+                    const [item] = items.splice(dragItem.index, 1);
+                    items.splice(targetIndex, 0, item);
+                    updateActiveSheetConfig({ [targetArea]: items });
+                } else if (['field', 'calc_field'].includes(dragItem.type)) {
+                    if (!newConfigList.includes(dragItem.value)) {
+                        if (targetIndex !== -1) newConfigList.splice(targetIndex, 0, dragItem.value);
+                        else newConfigList.push(dragItem.value);
+                        updateActiveSheetConfig({ [targetArea]: newConfigList });
+                        // Open Filter Modal immediately if dropped
+                        if (targetArea === 'filters') {
+                            setFilterModal({ open: true, field: dragItem.value, searchTerm: '' });
+                        }
+                    }
+                } else if (!['field', 'calc_field'].includes(dragItem.type) && dragItem.type !== targetArea) {
+                    const oldList = activeSheet.config[dragItem.type].filter(i => i !== dragItem.value);
+                    if (!newConfigList.includes(dragItem.value)) {
+                        if (targetIndex !== -1) newConfigList.splice(targetIndex, 0, dragItem.value);
+                        else newConfigList.push(dragItem.value);
+                    }
+                    updateActiveSheetConfig({ [dragItem.type]: oldList, [targetArea]: newConfigList });
+                }
+                setDragItem(null);
+            };
+
+            const saveCalculatedField = () => {
+                if (!newCalcField.name || !newCalcField.formula) return;
+                if (calcModal.editId) {
+                    setCalculatedFields(prev => prev.map(f => f.id === calcModal.editId ? { ...f, ...newCalcField } : f));
+                } else {
+                    setCalculatedFields(prev => [...prev, { id: Date.now(), ...newCalcField }]);
+                }
+                setNewCalcField({ name: '', formula: '' });
+                setCalcModal({ ...calcModal, open: false, editId: null });
+            };
+
+            const deleteCalculatedField = (id) => {
+                if (!window.confirm("本当にこの計算フィールドを削除しますか？")) return;
+                const field = calculatedFields.find(f => f.id === id);
+                setCalculatedFields(prev => prev.filter(f => f.id !== id));
+                const cleanConfig = { ...activeSheet.config };
+                ['rows', 'columns', 'values'].forEach(area => {
+                    cleanConfig[area] = cleanConfig[area].filter(f => f !== field?.name);
+                });
+                updateActiveSheetConfig(cleanConfig);
+            };
+
+            const toggleFilterValue = (val) => {
+                const field = filterModal.field;
+                const currentFilters = activeSheet.config.filterValues || {};
+                const currentValues = currentFilters[field] || [];
+                
+                let newValues;
+                if (currentValues.includes(val)) {
+                    newValues = currentValues.filter(v => v !== val);
+                } else {
+                    newValues = [...currentValues, val];
+                }
+                updateActiveSheetConfig({ filterValues: { ...currentFilters, [field]: newValues } });
+            };
+
+            const toggleAllFilter = (allVals) => {
+                const field = filterModal.field;
+                const currentFilters = activeSheet.config.filterValues || {};
+                const currentValues = currentFilters[field] || [];
+                
+                if (currentValues.length === allVals.length) {
+                    updateActiveSheetConfig({ filterValues: { ...currentFilters, [field]: [] } });
+                } else {
+                    updateActiveSheetConfig({ filterValues: { ...currentFilters, [field]: allVals } });
+                }
+            };
+
+            const renderFilterModalUI = () => {
+                if (!filterModal.open) return null;
+                const field = filterModal.field;
+                const uniqueValues = Array.from(new Set(data.map(r => String(r[field])))).sort();
+                const filteredValues = uniqueValues.filter(v => v.toLowerCase().includes(filterModal.searchTerm.toLowerCase()));
+                const selectedValues = activeSheet.config.filterValues?.[field] || [];
+                
+                const isAllSelected = selectedValues.length === 0; 
+
+                return (
+                    <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center backdrop-blur-sm" onClick={() => setFilterModal({ ...filterModal, open: false })}>
+                        <div className="bg-white p-6 rounded-2xl shadow-2xl w-80 border border-slate-100 transform scale-100 transition-all" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg text-slate-800 flex items-center"><Filter className="mr-2 text-indigo-500"/> {field}</h3>
+                                <button onClick={() => setFilterModal({ ...filterModal, open: false })} className="text-slate-400 hover:text-slate-600"><X/></button>
+                            </div>
+                            <div className="p-2 bg-slate-50 rounded-lg mb-2">
+                                <div className="flex items-center text-slate-400">
+                                    <Search size={14} className="mr-2"/>
+                                    <input 
+                                        type="text" 
+                                        placeholder="検索..." 
+                                        className="bg-transparent border-none text-sm w-full focus:ring-0 outline-none"
+                                        value={filterModal.searchTerm}
+                                        onChange={e => setFilterModal({...filterModal, searchTerm: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto space-y-1 custom-scrollbar">
+                                <div className="px-2 py-1 text-xs text-indigo-600 cursor-pointer hover:underline flex justify-between" 
+                                     onClick={() => {
+                                         if (isAllSelected) {
+                                             updateActiveSheetConfig({ filterValues: { ...activeSheet.config.filterValues, [field]: ["__NONE__"] } });
+                                         } else {
+                                             updateActiveSheetConfig({ filterValues: { ...activeSheet.config.filterValues, [field]: [] } });
+                                         }
+                                     }}>
+                                    <span>{isAllSelected ? 'すべて解除' : 'すべて選択'}</span>
+                                </div>
+                                {filteredValues.map(val => {
+                                    const isChecked = isAllSelected || selectedValues.includes(val);
+                                    return (
+                                        <label key={val} className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1.5 rounded">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isChecked} 
+                                                onChange={() => {
+                                                    let newVals;
+                                                    if (isAllSelected) {
+                                                        newVals = uniqueValues.filter(v => v !== val);
+                                                    } else {
+                                                        if (selectedValues.includes(val)) {
+                                                            newVals = selectedValues.filter(v => v !== val);
+                                                        } else {
+                                                            newVals = [...selectedValues, val];
+                                                        }
+                                                    }
+                                                    if (newVals.length === 0) newVals = ["__NONE__"];
+                                                    
+                                                    updateActiveSheetConfig({ filterValues: { ...activeSheet.config.filterValues, [field]: newVals } });
+                                                }} 
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300" 
+                                            />
+                                            <span className="truncate">{val || '(Blank)'}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                                <Button size="sm" onClick={() => setFilterModal({ ...filterModal, open: false })}>完了</Button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderSettingsModalUI = () => {
+                if (!settingsModal.open) return null;
+                return (
+                    <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center backdrop-blur-sm" onClick={() => setSettingsModal({ ...settingsModal, open: false })}>
+                        <div className="bg-white p-6 rounded-2xl shadow-2xl w-96 border border-slate-100 transform scale-100 transition-all" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-bold text-lg text-slate-800 flex items-center"><Settings className="mr-2 text-indigo-500"/> 設定: {settingsModal.field}</h3>
+                                <button onClick={() => setSettingsModal({ ...settingsModal, open: false })} className="text-slate-400 hover:text-slate-600"><X/></button>
+                            </div>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">チャートタイプ (Chart Type)</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {CHART_TYPES.map(type => (
+                                            <button key={type.id} 
+                                                onClick={() => updateFieldSetting(settingsModal.field, 'type', type.id)}
+                                                className={`py-2 px-1 text-xs rounded-lg border transition-all ${activeSheet.config.fieldSettings?.[settingsModal.field]?.type === type.id || (!activeSheet.config.fieldSettings?.[settingsModal.field]?.type && type.id === 'bar') ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                            >
+                                                {type.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">カラー (Color)</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {PALETTE.map(color => (
+                                            <button key={color} 
+                                                onClick={() => updateFieldSetting(settingsModal.field, 'color', color)}
+                                                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${activeSheet.config.fieldSettings?.[settingsModal.field]?.color === color ? 'border-slate-600 scale-110' : 'border-transparent'}`}
+                                                style={{backgroundColor: color}}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">表示形式 (Format)</label>
+                                    <select className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" 
+                                        value={activeSheet.config.fieldSettings?.[settingsModal.field]?.format || 'number'} 
+                                        onChange={(e) => updateFieldSetting(settingsModal.field, 'format', e.target.value)}
+                                    >
+                                        {Object.entries(FORMATS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="pt-2 border-t border-slate-100">
+                                    <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={activeSheet.config.fieldSettings?.[settingsModal.field]?.showInChart !== false} 
+                                            onChange={(e) => updateFieldSetting(settingsModal.field, 'showInChart', e.target.checked)}
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300" 
+                                        />
+                                        <span>チャートに表示 (Show in Chart)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="mt-8"><Button onClick={() => setSettingsModal({ ...settingsModal, open: false })} className="w-full">完了</Button></div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderChart = () => {
+                if (activeSheet.config.showChart === false) return null;
+
+                if (!pivotData || pivotData.body.length === 0 || activeSheet.config.values.length === 0) return (
+                    <div className="h-64 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed rounded-xl bg-slate-50/50">
+                        <BarChart2 className="mb-2 opacity-50" size={32}/><span>データをドラッグしてチャートを表示</span>
+                    </div>
+                );
+
+                const { body, colKeys } = pivotData;
+                const { values, fieldSettings = {}, globalChartSettings } = activeSheet.config;
+                
+                const chartValues = values.filter(v => fieldSettings[v]?.showInChart !== false);
+
+                if (chartValues.length === 0) return (
+                    <div className="h-64 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed rounded-xl bg-slate-50/50">
+                        <EyeOff className="mb-2 opacity-50" size={32}/><span>すべてのデータが非表示になっています</span>
+                    </div>
+                );
+
+                const chartHeight = 320;
+                const width = Math.max(900, body.length * 80);
+                
+                const allValues = [];
+                const percentValues = [];
+
+                body.forEach(r => {
+                    chartValues.forEach(v => {
+                        const fmtKey = (fieldSettings[v] && fieldSettings[v].format) || 'number';
+                        colKeys.forEach(k => {
+                            const val = r[`${k}_${v}`] || 0;
+                            allValues.push(val);
+                            if (fmtKey === 'percent') {
+                                percentValues.push(val);
+                            }
+                        });
+                    });
+                });
+
+                const maxValue = Math.max(...allValues, 1);
+                const maxPercentValue = percentValues.length ? Math.max(...percentValues, 0.01) : 0;
+                const hasPercentAxis = maxPercentValue > 0;
+
+                return (
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-x-auto relative">
+                        <div className="flex justify-between mb-6 items-center">
+                            <h3 className="font-bold text-slate-700 flex items-center"><Activity className="mr-2 text-indigo-600"/> 分析チャート</h3>
+                            <div className="flex items-center space-x-4">
+                                <label className="flex items-center text-xs text-slate-600 cursor-pointer">
+                                    <input type="checkbox" checked={globalChartSettings?.stacked} onChange={(e) => updateActiveSheetConfig({ globalChartSettings: { ...globalChartSettings, stacked: e.target.checked } })} className="mr-1.5 rounded text-indigo-600"/> 積み上げ (Stack)
+                                </label>
+                                <div className="flex space-x-2">
+                                    {chartValues.map((v, i) => {
+                                        const settings = fieldSettings[v] || {};
+                                        const color = settings.color || PALETTE[i % PALETTE.length];
+                                        return (
+                                            <div key={v} className="flex items-center text-xs bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 cursor-pointer hover:bg-slate-200" onClick={() => setSettingsModal({ open: true, field: v })}>
+                                                <span className="w-3 h-3 rounded-full mr-1.5" style={{backgroundColor: color}}></span>
+                                                <span className="font-medium text-slate-600">{v}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative select-none">
+                            <svg width={width} height={chartHeight + 50} className="font-sans text-xs overflow-visible">
+                                {[0, 0.25, 0.5, 0.75, 1].map(p => (
+                                    <g key={p}>
+                                        <line
+                                            x1="40"
+                                            y1={chartHeight * (1 - p)}
+                                            x2={width}
+                                            y2={chartHeight * (1 - p)}
+                                            stroke="#f1f5f9"
+                                            strokeWidth="1"
+                                        />
+                                        {/* Trục trái (CV, v.v.) */}
+                                        <text
+                                            x="32"
+                                            y={chartHeight * (1 - p) + 4}
+                                            textAnchor="end"
+                                            fill="#94a3b8"
+                                            className="text-[10px] font-mono"
+                                        >
+                                            {(maxValue * p).toLocaleString()}
+                                        </text>
+
+                                        {/* Trục phải cho % (CVR) */}
+                                        {hasPercentAxis && (
+                                            <text
+                                                x={width - 8}
+                                                y={chartHeight * (1 - p) + 4}
+                                                textAnchor="end"
+                                                fill="#94a3b8"
+                                                className="text-[10px] font-mono"
+                                            >
+                                                {(maxPercentValue * 100 * p).toFixed(1) + '%'}
+                                            </text>
+                                        )}
+                                    </g>
+                                ))}
+                                {body.map((row, i) => {
+                                    const xBase = 60 + i * (width - 60) / body.length;
+                                    const slotWidth = (width - 60) / body.length;
+                                    const centerX = xBase + slotWidth/2;
+                                    const stacks = {};
+
+                                    return (
+                                        <g key={i} onMouseEnter={() => setHoverData({ row, x: centerX, y: 0 })} onMouseLeave={() => setHoverData(null)}>
+                                            <text x={centerX} y={chartHeight + 24} textAnchor="middle" fill="#64748b" className="text-[11px] font-medium">{row._rowLabel.length > 8 ? row._rowLabel.substring(0,6)+'..' : row._rowLabel}</text>
+                                            
+                                            {colKeys.map(k => chartValues.map((v, vIdx) => {
+                                                const settings = fieldSettings[v] || {};
+                                                const type = settings.type || 'bar';
+                                                if (type === 'line') return null; 
+
+                                                const val = row[`${k}_${v}`] || 0;
+                                                const h = (val / maxValue) * chartHeight;
+                                                const color = settings.color || PALETTE[values.indexOf(v) % PALETTE.length];
+                                                
+                                                if (type === 'bar') {
+                                                    if (globalChartSettings?.stacked) {
+                                                        const stackH = stacks[k] || 0;
+                                                        const y = chartHeight - h - stackH;
+                                                        stacks[k] = stackH + h;
+                                                        return <rect key={`${k}-${v}`} x={centerX - 10} y={y} width={20} height={h} fill={color} opacity={0.9} />;
+                                                    } else {
+                                                        const barW = 12;
+                                                        const offset = (vIdx - (chartValues.length-1)/2) * 14;
+                                                        return <rect key={`${k}-${v}`} x={centerX + offset - barW/2} y={chartHeight - h} width={barW} height={h} fill={color} opacity={0.9} rx={2}/>;
+                                                    }
+                                                }
+                                                return null;
+                                            }))}
+                                            <rect x={xBase} y={0} width={slotWidth} height={chartHeight} fill="transparent" className="hover:bg-slate-50/5 transition-colors cursor-crosshair"/>
+                                        </g>
+                                    );
+                                })}
+                                {chartValues.map((v, vIdx) => {
+                                    const settings = fieldSettings[v] || {};
+                                    if (settings.type !== 'line') return null;
+
+                                    const color = settings.color || PALETTE[values.indexOf(v) % PALETTE.length];
+                                    const fmtKey = settings.format || 'number';
+                                    const usePercentAxis = fmtKey === 'percent' && hasPercentAxis;
+                                    const scaleMax = (usePercentAxis ? maxPercentValue : maxValue) || 1;
+
+                                    const points = body.map((row, i) => {
+                                        const xBase = 60 + i * (width - 60) / body.length;
+                                        const slotWidth = (width - 60) / body.length;
+                                        const val = colKeys.reduce((sum, k) => sum + (row[`${k}_${v}`] || 0), 0);
+                                        const h = (val / scaleMax) * chartHeight;
+                                        return `${xBase + slotWidth/2},${chartHeight - h}`;
+                                    }).join(' ');
+
+                                    return (
+                                        <g key={`line-g-${v}`}>
+                                            <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-sm" />
+                                            {body.map((row, i) => {
+                                                const xBase = 60 + i * (width - 60) / body.length;
+                                                const slotWidth = (width - 60) / body.length;
+                                                const val = colKeys.reduce((sum, k) => sum + (row[`${k}_${v}`] || 0), 0);
+                                                const h = (val / scaleMax) * chartHeight;
+                                                return (
+                                                    <circle
+                                                        key={`dot-${v}-${i}`}
+                                                        cx={xBase + slotWidth/2}
+                                                        cy={chartHeight - h}
+                                                        r={3}
+                                                        fill="white"
+                                                        stroke={color}
+                                                        strokeWidth={2}
+                                                    />
+                                                );
+                                            })}
+                                        </g>
+                                    );
+                                })}
+                            </svg>
+                            {hoverData && (
+                                <div className="absolute bg-slate-800/95 text-white text-xs p-3 rounded-lg shadow-xl pointer-events-none z-50 w-56 backdrop-blur-sm" style={{ left: Math.min(hoverData.x + 20, width - 200), top: 20 }}>
+                                    <div className="font-bold border-b border-slate-600 pb-1.5 mb-2 text-slate-200">{hoverData.row._rowLabel}</div>
+                                    <div className="space-y-1">
+                                        {chartValues.map((v, i) => {
+                                            const settings = fieldSettings[v] || {};
+                                            const val = colKeys.reduce((acc, k) => acc + (hoverData.row[`${k}_${v}`] || 0), 0);
+                                            const fmt = FORMATS[settings.format || 'number'].fn;
+                                            const color = settings.color || PALETTE[values.indexOf(v) % PALETTE.length];
+                                            return (
+                                                <div key={v} className="flex justify-between items-center">
+                                                    <div className="flex items-center"><span className="w-2 h-2 rounded-full mr-2" style={{backgroundColor: color}}></span><span className="text-slate-300">{v}</span></div>
+                                                    <span className="font-mono font-bold">{fmt(val)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            if (view === 'upload') {
+                return (
+                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans text-slate-800 p-6">
+                        <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl p-10 border border-slate-100">
+                            <div className="text-center mb-10">
+                                <div className="bg-indigo-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-200 transform rotate-3 hover:rotate-0 transition-transform">
+                                    <Activity className="text-white w-10 h-10" />
+                                </div>
+                                <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">Mini BI v6.6</h1>
+                                <p className="text-slate-500 mt-3 text-lg">高度なデータ分析プラットフォーム</p>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-2 space-y-4">
+                                    <h3 className="font-bold text-lg text-slate-700 mb-4 flex items-center"><UploadCloud className="mr-2 text-indigo-500"/> データソース</h3>
+                                    {fileSources.map((src) => (
+                                        <div key={src.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors flex flex-col sm:flex-row gap-4 items-center group">
+                                            <div className="flex-shrink-0 p-3 bg-white rounded-lg shadow-sm text-indigo-600"><FileText size={24}/></div>
+                                            <div className="flex-1 w-full space-y-2">
+                                                <input type="text" className="font-bold text-slate-700 bg-transparent border-none focus:ring-0 p-0 w-full placeholder-slate-400" value={src.name} onChange={(e) => updateSourceWrapper(src.id, 'name', e.target.value)} placeholder="ソース名を入力..." />
+                                                <div className="flex gap-2">
+                                                    <select className="bg-white border border-slate-300 rounded-md text-xs py-1 px-2" value={src.encoding} onChange={(e) => updateSourceWrapper(src.id, 'encoding', e.target.value)}>{ENCODING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                                                    <input type="file" accept=".csv,.txt,.tsv" onChange={(e) => { if(e.target.files[0]) updateSourceWrapper(src.id, 'file', e.target.files[0]) }} className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+                                                </div>
+                                            </div>
+                                            {fileSources.length > 1 && <button onClick={() => setFileSources(fileSources.filter(s => s.id !== src.id))} className="text-slate-300 hover:text-rose-500 transition-colors p-2"><Trash2 size={18}/></button>}
+                                        </div>
+                                    ))}
+                                    <Button variant="secondary" onClick={() => setFileSources([...fileSources, { id: `src_${Date.now()}`, name: `データ ${fileSources.length + 1}`, file: null, encoding: 'auto' }])} className="w-full border-dashed py-3 text-slate-500 hover:text-indigo-600 hover:border-indigo-300"><Plus size={18} className="mr-2"/> ソースを追加</Button>
+                                </div>
+                                <div className="lg:col-span-1 bg-indigo-50 rounded-xl p-6 border border-indigo-100 flex flex-col">
+                                    <h3 className="font-bold text-indigo-900 mb-4 flex items-center"><FolderOpen className="mr-2"/> テンプレート</h3>
+                                    <div className="flex-1 overflow-y-auto space-y-2 mb-4 max-h-60 pr-1 custom-scrollbar">
+                                        {savedTemplates.length === 0 && <div className="text-sm text-indigo-400 text-center italic py-8">保存されたテンプレートはありません</div>}
+                                        {savedTemplates.map(t => (
+                                            <div key={t.id} className="bg-white p-3 rounded-lg border border-indigo-100 shadow-sm hover:shadow-md transition-all cursor-pointer group" onClick={() => loadTemplate(t)}>
+                                                <div className="flex justify-between items-start">
+                                                    <span className="font-bold text-slate-700 text-sm line-clamp-1">{t.name}</span>
+                                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={(e) => {e.stopPropagation(); exportTemplateJSON(t)}} className="text-slate-400 hover:text-indigo-600 p-1"><Download size={14}/></button>
+                                                        <button onClick={(e) => {e.stopPropagation(); deleteTemplate(t.id)}} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={14}/></button>
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs text-slate-400 mt-1">{t.sheets.length} シート • {new Date(t.id).toLocaleDateString()}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <label className="mt-auto w-full flex items-center justify-center px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors text-sm font-medium shadow-sm">
+                                        <UploadCloud size={16} className="mr-2"/> ファイルから読み込み (Import)
+                                        <input type="file" accept=".json" className="hidden" onChange={importTemplateJSON} />
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="mt-10 flex justify-center">
+                                <Button
+                                    size="lg"
+                                    className="px-12 py-4 text-lg shadow-indigo-200 shadow-md"
+                                    onClick={() => {
+                                        setView('dashboard');    // vào màn phân tích
+                                    }}
+                                >
+                                    分析を開始 (Start) <ChevronRight className="ml-2"/>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="h-screen flex flex-col bg-slate-50 font-sans overflow-hidden text-slate-800">
+                    {renderSettingsModalUI()}
+                    {renderFilterModalUI()} {/* ADDED FILTER MODAL RENDER */}
+                    <header className="bg-white border-b border-slate-200 px-6 py-3 shadow-sm z-30 flex justify-between items-center">
+                        <div className="flex items-center space-x-4">
+                            <div className="bg-indigo-600 p-2 rounded-lg text-white shadow-indigo-200 shadow-md"><Activity size={20}/></div>
+                            <h1 className="font-bold text-xl text-slate-800 tracking-tight">MiniBI <span className="text-slate-400 font-light text-sm ml-1">v6.6</span></h1>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <div className="flex bg-slate-100 p-1 rounded-lg">
+                                {sheets.map(sheet => (
+                                    <div key={sheet.id} onClick={() => { setActiveSheetId(sheet.id); setEditingTabId(null); }} onDoubleClick={() => { setEditingTabId(sheet.id); setEditingTabName(sheet.name); }} className={`px-4 py-1.5 text-sm rounded-md cursor-pointer transition-all flex items-center ${activeSheetId === sheet.id ? 'bg-white text-indigo-600 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                        {editingTabId === sheet.id ? <input autoFocus className="w-20 bg-transparent border-b border-indigo-500 outline-none" value={editingTabName} onChange={e => setEditingTabName(e.target.value)} onBlur={() => {if(editingTabName.trim()) setSheets(prev => prev.map(s => s.id === editingTabId ? {...s, name: editingTabName} : s)); setEditingTabId(null)}} /> : sheet.name}
+                                        {sheets.length > 1 && <X size={12} className="ml-2 opacity-0 hover:opacity-100 hover:text-rose-500" onClick={(e) => {e.stopPropagation(); setSheets(sheets.filter(s => s.id !== sheet.id)); if(activeSheetId === sheet.id) setActiveSheetId(sheets[0].id)}} />}
+                                    </div>
+                                ))}
+                                <button onClick={() => { const id = Date.now(); setSheets([...sheets, { id, name: `Sheet ${sheets.length+1}`, config: JSON.parse(JSON.stringify(defaultConfig)) }]); setActiveSheetId(id); }} className="px-3 text-slate-400 hover:text-indigo-600"><Plus size={16}/></button>
+                            </div>
+                            <div className="h-6 w-px bg-slate-300 mx-2"></div>
+                            <Button variant="ghost" onClick={() => setTemplateModal(true)}><Save size={18} className="mr-2"/> 保存</Button>
+                            <Button variant="primary" onClick={() => setView('upload')} className="shadow-indigo-200 shadow-md"><RefreshCw size={18} className="mr-2"/> データ</Button>
+                        </div>
+                    </header>
+                    <div className="flex flex-1 overflow-hidden">
+                        <aside className="w-80 bg-white border-r border-slate-200 flex flex-col z-20">
+                            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 className="font-bold text-xs uppercase text-slate-500 tracking-wider">フィールド (Fields)</h3>
+                                <button onClick={() => setCalcModal({ open: true, tab: 'create', editId: null })} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors" title="計算フィールド作成"><Calculator size={18}/></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+                                <div className="space-y-1.5">
+                                    {headers.map(h => (<div key={h} draggable onDragStart={(e) => handleDragStart(e, 'field', h)} className="flex items-center px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm hover:border-indigo-300 hover:shadow-sm cursor-grab active:cursor-grabbing text-slate-700 transition-all"><GripVertical size={14} className="text-slate-300 mr-2"/> {h}</div>))}
+                                    {calculatedFields.length > 0 && (
+                                        <div className="pt-4">
+                                            <div className="text-[10px] font-bold text-indigo-400 uppercase mb-2 ml-1">計算フィールド</div>
+                                            {calculatedFields.map(cf => (
+                                                <div key={cf.id} draggable onDragStart={(e) => handleDragStart(e, 'calc_field', cf.name)} className="flex items-center justify-between px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700 hover:border-indigo-300 cursor-grab group">
+                                                    <div className="flex items-center truncate"><Calculator size={12} className="mr-2 opacity-70"/> {cf.name}</div>
+                                                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => { setNewCalcField({ name: cf.name, formula: cf.formula }); setCalcModal({ open: true, tab: 'create', editId: cf.id }); }} className="p-1 hover:text-indigo-900"><Edit3 size={12}/></button>
+                                                        <button onClick={() => deleteCalculatedField(cf.id)} className="p-1 hover:text-rose-600"><Trash2 size={12}/></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="space-y-4">
+                                    {['rows', 'columns', 'values', 'filters'].map(area => (
+                                        <div key={area} className={`rounded-xl border-2 border-dashed p-4 transition-colors min-h-[100px] ${activeSheet.config[area].length > 0 ? 'bg-white border-slate-300' : 'bg-slate-50 border-slate-200'}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, area)}>
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center">
+                                                {area === 'rows' ? <Layout size={14} className="mr-1.5"/> : area === 'columns' ? <BarChart2 size={14} className="mr-1.5 rotate-90"/> : area === 'values' ? <PieChart size={14} className="mr-1.5"/> : <Filter size={14} className="mr-1.5"/>}
+                                                {area === 'rows' ? '行 (Rows)' : area === 'columns' ? '列 (Columns)' : area === 'values' ? '値 (Values)' : 'フィルター (Filters)'}
+                                            </h4>
+                                            <div className="space-y-1.5">
+                                                {activeSheet.config[area].map((item, idx) => (
+                                                    <div key={`${area}-${item}`} draggable onDragStart={(e) => handleDragStart(e, area, item, idx)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.stopPropagation(); handleDrop(e, area, idx); }} className="flex justify-between items-center bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-sm cursor-move group hover:border-indigo-300">
+                                                        <div className="flex items-center truncate"><GripVertical size={12} className="text-slate-300 mr-2"/> {item}</div>
+                                                        <div className="flex items-center">
+                                                            {area === 'filters' && (
+                                                                <button onClick={() => setFilterModal({ open: true, field: item, searchTerm: '' })} className="text-slate-400 hover:text-indigo-600 mr-1 p-1"><Filter size={12}/></button>
+                                                            )}
+                                                            {area === 'values' && <button onClick={(e) => { e.stopPropagation(); setSettingsModal({ open: true, field: item }); }} className="text-slate-400 hover:text-indigo-600 mr-1 p-1"><Settings size={12}/></button>}
+                                                            <button onClick={() => updateActiveSheetConfig({ [area]: activeSheet.config[area].filter(i => i !== item) })} className="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12}/></button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {activeSheet.config[area].length === 0 && <div className="text-xs text-slate-400 text-center py-4 italic">ドラッグ＆ドロップ</div>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="pt-4 border-t border-slate-100 space-y-3">
+                                    <Checkbox label="平均行を表示 (Average)" checked={activeSheet.config.showAverage} onChange={e => updateActiveSheetConfig({ showAverage: e.target.checked })}/>
+                                    <Checkbox label="着地予想を表示 (Forecast)" checked={activeSheet.config.showForecast} onChange={e => updateActiveSheetConfig({ showForecast: e.target.checked })}/>
+                                    <Checkbox label="累積を表示 (Cumulative)" checked={activeSheet.config.showCumulative} onChange={e => updateActiveSheetConfig({ showCumulative: e.target.checked })}/>
+                                    <Checkbox label="チャートを表示 (Show Chart)" checked={activeSheet.config.showChart !== false} onChange={e => updateActiveSheetConfig({ showChart: e.target.checked })}/>
+                                </div>
+                            </div>
+                        </aside>
+                        <main className="flex-1 overflow-auto p-8 custom-scrollbar">
+                            {activeSheet.config.values.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
+                                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6"><Layout size={48} className="text-slate-300"/></div>
+                                    <p className="text-lg font-medium">フィールドを配置してレポートを作成</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-8 max-w-7xl mx-auto pb-20">
+                                    {renderChart()}
+                                    <Card className="overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full text-sm text-left">
+                                                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                                    <tr>
+                                                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-wider sticky left-0 bg-slate-50 border-r border-slate-200 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{activeSheet.config.rows.join(' > ') || 'Group'}</th>
+                                                        {pivotData.colKeys.map((colKey, colGroupIndex) => {
+                                                            const bgColor = PASTEL_COLORS[colGroupIndex % PASTEL_COLORS.length];
+                                                            return activeSheet.config.values.map(val => (
+                                                                <th
+                                                                    key={`${colKey}-${val}`}
+                                                                    className="px-6 py-4 text-right font-bold text-xs uppercase tracking-wider border-r border-slate-200"
+                                                                    style={{ backgroundColor: bgColor }}
+                                                                >
+                                                                    <div className="text-[10px] text-indigo-500 mb-1">
+                                                                        {colKey !== 'All' ? colKey : ''}
+                                                                    </div>
+                                                                    {val}
+                                                                </th>
+                                                            ));
+                                                        })}
+                                                        <th className="px-6 py-4 text-right font-bold uppercase text-xs tracking-wider bg-slate-100 border-l border-slate-200 text-slate-700">総計 (Total)</th>
+                                                        {activeSheet.config.showCumulative && <th className="px-6 py-4 text-right font-bold uppercase text-xs tracking-wider bg-slate-100 border-l border-slate-200 text-indigo-700">累積 (Cumulative)</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 bg-white">
+                                                    {pivotData.body.map((row, idx) => (
+                                                        <tr key={idx} className="hover:bg-indigo-50/30 transition-colors group">
+                                                            <td className="px-6 py-3 font-medium text-slate-700 border-r border-slate-200 bg-slate-50/30 sticky left-0 group-hover:bg-indigo-50/50 z-10">{row._rowLabel}</td>
+                                                            {pivotData.colKeys.map((colKey, colGroupIndex) =>
+                                                                activeSheet.config.values.map(val => {
+                                                                    const fmt = FORMATS[activeSheet.config.fieldSettings?.[val]?.format || 'number'].fn;
+                                                                    const bgColor = PASTEL_COLORS[colGroupIndex % PASTEL_COLORS.length];
+                                                                    return (
+                                                                        <td
+                                                                            key={`${colKey}-${val}`}
+                                                                            className="px-6 py-3 text-right text-slate-600 border-r border-slate-100 font-mono"
+                                                                            style={{ backgroundColor: bgColor }}
+                                                                        >
+                                                                            {fmt(row[`${colKey}_${val}`] || 0)}
+                                                                        </td>
+                                                                    );
+                                                                })
+                                                            )}
+                                                            <td className="px-6 py-3 text-right font-bold text-slate-800 bg-slate-50/50 border-l border-slate-200 font-mono">{Math.round(row._total).toLocaleString()}</td>
+                                                            {activeSheet.config.showCumulative && <td className="px-6 py-3 text-right font-bold text-indigo-600 bg-slate-50/50 border-l border-slate-200 font-mono">{Math.round(row._cumulative).toLocaleString()}</td>}
+                                                        </tr>
+                                                    ))}
+                                                    {['Total', 'Average', 'Forecast'].map(type => {
+                                                        if ((type === 'Average' && !activeSheet.config.showAverage) || (type === 'Forecast' && !activeSheet.config.showForecast)) return null;
+                                                        const row = pivotData.bottom[type];
+                                                        const style = type === 'Total' ? 'bg-slate-100 font-bold border-t-2 border-slate-200' : type === 'Forecast' ? 'bg-emerald-50/50 text-emerald-700' : 'bg-white italic text-slate-500';
+                                                        return (
+                                                            <tr key={type} className={`border-b ${style}`}>
+                                                                <td className="px-6 py-4 border-r border-slate-200 sticky left-0">{row._rowLabel}</td>
+                                                                {pivotData.colKeys.map((colKey, colGroupIndex) =>
+                                                                    activeSheet.config.values.map(val => {
+                                                                        const fmt = FORMATS[activeSheet.config.fieldSettings?.[val]?.format || 'number'].fn;
+                                                                        const bgColor = PASTEL_COLORS[colGroupIndex % PASTEL_COLORS.length];
+                                                                        return (
+                                                                            <td
+                                                                                key={`${colKey}-${val}`}
+                                                                                className="px-6 py-3 text-right text-slate-600 border-r border-slate-100 font-mono"
+                                                                                style={{ backgroundColor: bgColor }}
+                                                                            >
+                                                                                {fmt(row[`${colKey}_${val}`] || 0)}
+                                                                            </td>
+                                                                        );
+                                                                    })
+                                                                )}
+                                                                <td className="px-6 py-4 text-right border-l border-slate-200 font-mono">{Math.round(row._total).toLocaleString()}</td>
+                                                                {activeSheet.config.showCumulative && <td></td>}
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </Card>
+                                </div>
+                            )}
+                        </main>
+                    </div>
+                    {calcModal.open && (
+                        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl shadow-2xl p-8 w-[650px] border border-slate-200 animate-in fade-in zoom-in duration-200">
+                                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center"><Calculator className="mr-3 text-indigo-600"/> 計算フィールド作成</h3>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">フィールド名 (Name)</label>
+                                        <input type="text" className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="例: CVR (コンバージョン率)" value={newCalcField.name} onChange={e => setNewCalcField({...newCalcField, name: e.target.value})}/>
+                                    </div>
+                                    <div className="flex gap-6">
+                                        <div className="flex-1">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">計算式 (Formula)</label>
+                                            <textarea className="w-full border border-slate-300 rounded-lg p-3 font-mono text-sm bg-slate-50 h-32 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="右のリストからドラッグ... 例: [CV] / [Click]" value={newCalcField.formula} onChange={e => setNewCalcField({...newCalcField, formula: e.target.value})} onDragOver={e => e.preventDefault()} onDrop={(e) => {e.preventDefault(); if(dragItem?.value) setNewCalcField(prev => ({...prev, formula: prev.formula + `[${dragItem.value}]`}))}} />
+                                        </div>
+                                        <div className="w-48 border-l border-slate-100 pl-6">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">フィールド一覧</label>
+                                            <div className="h-32 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                                                {headers.map(h => (<div key={h} draggable onDragStart={(e) => handleDragStart(e, 'field_insert', h)} className="text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-md cursor-grab hover:bg-indigo-50 hover:border-indigo-200 truncate select-none">{h}</div>))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                                        <Button variant="ghost" onClick={() => setCalcModal({...calcModal, open: false})}>キャンセル</Button>
+                                        <Button onClick={saveCalculatedField}>{calcModal.editId ? '更新' : '作成'}</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {templateModal && (
+                        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center backdrop-blur-sm" onClick={() => setTemplateModal(false)}>
+                            <div className="bg-white rounded-2xl p-8 w-[500px] shadow-2xl" onClick={e => e.stopPropagation()}>
+                                <h3 className="font-bold text-xl mb-6 flex items-center text-slate-800"><FolderOpen className="mr-3 text-indigo-600"/> テンプレート管理</h3>
+                                <div className="flex gap-2 mb-6">
+                                    <input type="text" className="border border-slate-300 rounded-lg px-4 py-2 flex-1 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="新しいテンプレート名..." value={templateNameInput} onChange={e => setTemplateNameInput(e.target.value)} />
+                                    <Button onClick={saveTemplate}>保存</Button>
+                                </div>
+                                <div className="border-t border-slate-100 pt-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-xs font-bold text-slate-400 uppercase">保存済み</span>
+                                        <label className="text-xs text-indigo-600 cursor-pointer hover:underline flex items-center">
+                                            <UploadCloud size={12} className="mr-1"/> インポート
+                                            <input type="file" accept=".json" className="hidden" onChange={importTemplateJSON} />
+                                        </label>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                                        {savedTemplates.map(t => (
+                                            <div key={t.id} className="flex justify-between items-center p-3 hover:bg-slate-50 border border-slate-100 rounded-lg cursor-pointer group transition-colors" onClick={() => loadTemplate(t)}>
+                                                <div>
+                                                    <div className="font-bold text-slate-700 text-sm">{t.name}</div>
+                                                    <div className="text-xs text-slate-400">{new Date(t.id).toLocaleDateString()}</div>
+                                                </div>
+                                                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => {e.stopPropagation(); exportTemplateJSON(t)}} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="ダウンロード"><Download size={16}/></button>
+                                                    <button onClick={(e) => {e.stopPropagation(); deleteTemplate(t.id)}} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors" title="削除"><Trash2 size={16}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {savedTemplates.length === 0 && <div className="text-center text-slate-400 py-6 italic text-sm">テンプレートはありません</div>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- RENDER ROOT ---
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MiniBIApp />);
+        
+    </script>
+</body>
+</html>
